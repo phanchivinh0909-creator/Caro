@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zenith Luxury Gomoku (Caro 15x15)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-obsidian: #07090e;
+            --surface-glass: rgba(18, 24, 38, 0.75);
+            --surface-solid: #121826;
+            --border-glow: rgba(212, 175, 55, 0.25);
+            --border-active: rgba(212, 175, 55, 0.7);
+            --gold-primary: #d4af37;
+            --gold-light: #f3e5ab;
+            --gold-dark: #aa8c2c;
+            --accent-x: #ff3366;
+            --accent-o: #00f0ff;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --shadow-lux: 0 12px 40px rgba(0, 0, 0, 0.6);
+            --radius-box: 16px;
+        }
+
+        [data-theme="emerald"] {
+            --border-glow: rgba(16, 185, 129, 0.25);
+            --border-active: rgba(16, 185, 129, 0.7);
+            --gold-primary: #10b981;
+            --gold-light: #a7f3d0;
+            --gold-dark: #047857;
+            --accent-x: #f43f5e;
+            --accent-o: #38bdf8;
+        }
+
+        [data-theme="neon"] {
+            --border-glow: rgba(236, 72, 153, 0.25);
+            --border-active: rgba(236, 72, 153, 0.8);
+            --gold-primary: #ec4899;
+            --gold-light: #fbcfe8;
+            --gold-dark: #be185d;
+            --accent-x: #a855f7;
+            --accent-o: #06b6d4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-obsidian);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background Particle Glow Effect */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--border-glow) 0%, rgba(0,0,0,0) 70%);
+            top: -200px;
+            left: -200px;
+            z-index: 0;
+            pointer-events: none;
+            animation: floatGlow 10s ease-in-out infinite alternate;
+        }
+
+        @keyframes floatGlow {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 100px, 1.2); }
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            min-height: 100vh;
+            background: var(--surface-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-left: 1px solid rgba(255,255,255,0.05);
+            border-right: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1;
+            box-shadow: var(--shadow-lux);
+        }
+
+        @media(min-width: 481px) {
+            .app-container {
+                min-height: 880px;
+                max-height: 92vh;
+                border: 1px solid var(--border-glow);
+                border-radius: 24px;
+                overflow: hidden;
+            }
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Common Elements */
+        .logo-area {
+            text-align: center;
+            margin: 24px 0;
+        }
+
+        .logo-area h1 {
+            font-size: 28px;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--gold-light), var(--gold-primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .logo-area p {
+            font-size: 13px;
+            color: var(--text-muted);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .input-group {
+            margin-bottom: 18px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gold-light);
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(7, 9, 14, 0.6);
+            border: 1px solid var(--border-glow);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--gold-primary), var(--gold-dark));
+            color: #07090e;
+            font-weight: 700;
+            font-size: 15px;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(212, 175, 55, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.06);
+            color: var(--text-main);
+            border: 1px solid var(--border-glow);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.1);
+            border-color: var(--gold-primary);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.15);
+        }
+
+        /* Auth Screen Tabs */
+        .auth-tabs {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 4px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            background: transparent;
+            border: none;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .auth-tab.active {
+            background: var(--surface-solid);
+            color: var(--gold-light);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Dashboard Header */
+        .dash-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-glow);
+            padding: 12px 16px;
+            border-radius: 16px;
+            margin-bottom: 20px;
+        }
+
+        .user-info h3 {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gold-light);
+        }
+
+        .user-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .stats-badge-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .badge-pill {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px solid var(--border-glow);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gold-light);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+            margin-top: 10px;
+        }
+
+        .menu-card {
+            background: rgba(18, 24, 38, 0.6);
+            border: 1px solid var(--border-glow);
+            border-radius: 16px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .menu-card:hover {
+            border-color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+        }
+
+        .menu-card i {
+            font-size: 24px;
+            color: var(--gold-primary);
+            width: 48px;
+            height: 48px;
+            background: rgba(212, 175, 55, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+        }
+
+        .menu-card-info h4 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text-main);
+        }
+
+        .menu-card-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 7, 11, 0.8);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal-box {
+            background: var(--surface-solid);
+            border: 1px solid var(--border-active);
+            width: 100%;
+            max-width: 380px;
+            border-radius: 20px;
+            padding: 24px;
+            text-align: center;
+            box-shadow: var(--shadow-lux);
+            animation: modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes modalPop {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-box h3 {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--gold-light);
+        }
+
+        .modal-box p {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Game Screen Layout */
+        .game-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .back-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-glow);
+            color: var(--text-main);
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .back-btn:hover {
+            border-color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .match-status {
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border-glow);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gold-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .turn-indicator {
+            display: flex;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-glow);
+            border-radius: 14px;
+            padding: 10px;
+            margin-bottom: 12px;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .player-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .player-badge.active {
+            border-color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.15);
+            box-shadow: 0 0 10px rgba(212, 175, 55, 0.2);
+        }
+
+        .player-badge .symbol {
+            font-weight: 800;
+            font-size: 15px;
+        }
+        .player-badge .symbol.x { color: var(--accent-x); }
+        .player-badge .symbol.o { color: var(--accent-o); }
+
+        /* Caro Board 15x15 container */
+        .board-container {
+            width: 100%;
+            aspect-ratio: 1;
+            background: rgba(5, 7, 11, 0.9);
+            border: 2px solid var(--border-active);
+            border-radius: 14px;
+            padding: 4px;
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            gap: 1px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            margin-bottom: 15px;
+        }
+
+        .cell {
+            background: rgba(18, 24, 38, 0.7);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 11px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+
+        .cell:hover {
+            background: rgba(212, 175, 55, 0.15);
+        }
+
+        .cell.x {
+            color: var(--accent-x);
+            text-shadow: 0 0 8px var(--accent-x);
+        }
+
+        .cell.o {
+            color: var(--accent-o);
+            text-shadow: 0 0 8px var(--accent-o);
+        }
+
+        .cell.winning {
+            background: rgba(212, 175, 55, 0.4) !important;
+            animation: pulseWin 0.8s infinite alternate;
+        }
+
+        @keyframes pulseWin {
+            from { transform: scale(1); }
+            to { transform: scale(1.1); box-shadow: 0 0 12px var(--gold-primary); }
+        }
+
+        /* Skin Shop Grid */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 15px;
+        }
+
+        .skin-card {
+            background: rgba(18, 24, 38, 0.6);
+            border: 1px solid var(--border-glow);
+            border-radius: 14px;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .skin-card:hover, .skin-card.selected {
+            border-color: var(--gold-primary);
+            background: rgba(212, 175, 55, 0.08);
+            box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+        }
+
+        .skin-card h4 {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .skin-card p {
+            font-size: 12px;
+            color: var(--gold-light);
+            margin-bottom: 10px;
+        }
+
+        /* Utility */
+        .flex-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .room-code-box {
+            background: rgba(0,0,0,0.5);
+            border: 1px dashed var(--gold-primary);
+            padding: 12px;
+            border-radius: 10px;
+            font-family: monospace;
+            font-size: 18px;
+            letter-spacing: 2px;
+            color: var(--gold-light);
+            margin: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+</head>
+<body data-theme="obsidian">
+
+<div class="app-container">
+
+    <!-- 1. AUTH SCREEN -->
+    <div id="screen-auth" class="screen active">
+        <div class="logo-area" style="margin-top: 40px;">
+            <h1>ZENITH GOMOKU</h1>
+            <p>Hệ Thống Cờ Caro Đẳng Cấp</p>
+        </div>
+
+        <div class="auth-tabs">
+            <button class="auth-tab active" onclick="switchAuthTab('login')">Đăng Nhập</button>
+            <button class="auth-tab" onclick="switchAuthTab('register')">Đăng Ký</button>
+        </div>
+
+        <div id="auth-form-container">
+            <div class="input-group">
+                <label>Tên tài khoản</label>
+                <input type="text" id="auth-user" class="input-field" placeholder="Nhập tên của bạn...">
+            </div>
+            <div class="input-group">
+                <label>Mật khẩu</label>
+                <input type="password" id="auth-pass" class="input-field" placeholder="••••••••">
+            </div>
+            <button class="btn" onclick="handleAuth()">Xác Nhận Truy Cập</button>
+        </div>
+    </div>
+
+    <!-- 2. DASHBOARD SCREEN -->
+    <div id="screen-dash" class="screen">
+        <div class="dash-header">
+            <div class="user-info">
+                <h3 id="display-username">Thủ Lĩnh</h3>
+                <p><i class="fa-solid fa-fire" style="color: #ff6b6b;"></i> Streak: <span id="display-streak">1</span> ngày</p>
+            </div>
+            <div class="stats-badge-group">
+                <div class="badge-pill"><i class="fa-solid fa-trophy"></i> <span id="display-wins">0</span></div>
+                <div class="badge-pill" style="color: var(--gold-light);"><i class="fa-solid fa-coins"></i> <span id="display-tokens">100</span></div>
+            </div>
+        </div>
+
+        <div class="logo-area" style="margin: 10px 0 20px 0;">
+            <h1 style="font-size: 22px;">CHỌN CHẾ ĐỘ CHẤN ĐẤU</h1>
+            <p>Trải nghiệm đỉnh cao cờ caro 15x15</p>
+        </div>
+
+        <div class="menu-grid">
+            <div class="menu-card" onclick="openModeModal('ai')">
+                <i class="fa-solid fa-robot"></i>
+                <div class="menu-card-info">
+                    <h4>Chơi Với Máy (AI)</h4>
+                    <p>Thử thách 3 cấp độ: Dễ, Trung Bình, Khó</p>
+                </div>
+            </div>
+
+            <div class="menu-card" onclick="startPracticeMode()">
+                <i class="fa-solid fa-chess-board"></i>
+                <div class="menu-card-info">
+                    <h4>Chế Độ Luyện Tập</h4>
+                    <p>Máy tự động đấu với máy liên tục</p>
+                </div>
+            </div>
+
+            <div class="menu-card" onclick="openModeModal('online')">
+                <i class="fa-solid fa-globe"></i>
+                <div class="menu-card-info">
+                    <h4>Đấu Online (Phòng Socket)</h4>
+                    <p>Tạo phòng hoặc nhập ID đấu trực tiếp</p>
+                </div>
+            </div>
+
+            <div class="menu-card" onclick="openShopScreen()">
+                <i class="fa-solid fa-store"></i>
+                <div class="menu-card-info">
+                    <h4>Cửa Hàng Giao Diện</h4>
+                    <p>Dùng Token thưởng để mở khóa skin đẹp</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. GAME SCREEN -->
+    <div id="screen-game" class="screen">
+        <div class="game-top-bar">
+            <button class="back-btn" onclick="returnToDashboard()"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="match-status" id="match-status-text">Đang trong trận đấu</div>
+            <button class="back-btn" onclick="resetGame()"><i class="fa-solid fa-rotate-right"></i></button>
+        </div>
+
+        <div class="turn-indicator">
+            <div class="player-badge active" id="p1-badge">
+                <span class="symbol x">X</span> <span id="p1-name">Bạn</span>
+            </div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-muted);">VS</div>
+            <div class="player-badge" id="p2-badge">
+                <span class="symbol o">O</span> <span id="p2-name">AI Dễ</span>
+            </div>
+        </div>
+
+        <!-- 15x15 Caro Board -->
+        <div class="board-container" id="caro-board"></div>
+    </div>
+
+    <!-- 4. SHOP SCREEN -->
+    <div id="screen-shop" class="screen">
+        <div class="game-top-bar">
+            <button class="back-btn" onclick="returnToDashboard()"><i class="fa-solid fa-arrow-left"></i></button>
+            <div class="match-status">Cửa Hàng Giao Diện</div>
+            <div class="badge-pill" style="color: var(--gold-light);"><i class="fa-solid fa-coins"></i> <span id="shop-tokens">100</span></div>
+        </div>
+
+        <div class="logo-area" style="margin: 10px 0;">
+            <h1 style="font-size: 20px;">GIAO DIỆN ĐỘC QUYỀN</h1>
+            <p>Mở khóa các phong cách bàn cờ mới</p>
+        </div>
+
+        <div class="shop-grid" id="skin-shop-list">
+            <!-- Rendered via JS -->
+        </div>
+    </div>
+
+</div>
+
+<!-- MODALS -->
+<!-- Mode Select Modal (AI / Online) -->
+<div class="modal-overlay" id="modal-mode">
+    <div class="modal-box">
+        <h3 id="modal-mode-title">Chọn Cấp Độ Máy</h3>
+        <p id="modal-mode-desc">Chọn mức thử thách phù hợp với bạn</p>
+        
+        <div id="ai-levels-container">
+            <button class="btn btn-secondary" style="margin-bottom: 8px;" onclick="startAIMatch('easy')">Dễ (Easy)</button>
+            <button class="btn btn-secondary" style="margin-bottom: 8px;" onclick="startAIMatch('medium')">Trung Bình (Medium)</button>
+            <button class="btn btn-secondary" style="margin-bottom: 8px;" onclick="startAIMatch('hard')">Khó (Hard)</button>
+        </div>
+
+        <div id="online-rooms-container" style="display: none;">
+            <div class="input-group" style="text-align: left;">
+                <label>Nhập ID Phòng</label>
+                <input type="text" id="input-room-id" class="input-field" placeholder="Ví dụ: ROOM99">
+            </div>
+            <button class="btn" onclick="joinOnlineRoom()">Vào Phòng Đấu</button>
+            <div style="margin: 15px 0; font-size: 12px; color: var(--text-muted);">- HOẶC -</div>
+            <button class="btn btn-secondary" onclick="createOnlineRoom()">Tạo Phòng Mới</button>
+        </div>
+
+        <button class="btn btn-secondary" style="margin-top: 15px; background: rgba(255,0,0,0.1); border-color: rgba(255,0,0,0.3);" onclick="closeModals()">Đóng</button>
+    </div>
+</div>
+
+<!-- Room Created Modal with Copy Link -->
+<div class="modal-overlay" id="modal-room-created">
+    <div class="modal-box">
+        <h3>Tạo Phòng Thành Công</h3>
+        <p>Gửi ID này cho bạn bè để cùng tham gia đấu Socket online:</p>
+        <div class="room-code-box">
+            <span id="created-room-code">ZENITH88</span>
+            <button class="btn" style="width: auto; padding: 6px 12px; font-size: 12px; margin: 0;" onclick="copyRoomCode()"><i class="fa-solid fa-copy"></i> Sao chép</button>
+        </div>
+        <button class="btn" onclick="startCreatedOnlineGame()">Vào Trận Đấu</button>
+    </div>
+</div>
+
+<!-- Game Over Modal -->
+<div class="modal-overlay" id="modal-gameover">
+    <div class="modal-box">
+        <h3 id="gameover-title">CHIẾN THẮNG!</h3>
+        <p id="gameover-desc">Bạn đã đạt 5 ô liên tiếp và nhận +20 Token thưởng.</p>
+        <button class="btn" onclick="returnToDashboard()">Về Trang Chủ</button>
+    </div>
+</div>
+
+<script>
+    // --- APP STATE ---
+    let currentUser = {
+        username: "Thủ Lĩnh",
+        streak: 1,
+        wins: 0,
+        tokens: 100,
+        activeSkin: 'obsidian',
+        unlockedSkins: ['obsidian']
+    };
+
+    let boardSize = 15;
+    let board = [];
+    let currentPlayer = 'X'; // X or O
+    let gameActive = false;
+    let gameMode = 'ai'; // ai, practice, online
+    let aiDifficulty = 'easy';
+    let practiceInterval = null;
+    let onlineRoomId = '';
+    let isMyTurnOnline = true;
+
+    const skins = [
+        { id: 'obsidian', name: 'Obsidian Gold', price: 0, theme: 'obsidian' },
+        { id: 'emerald', name: 'Emerald Noir', price: 50, theme: 'emerald' },
+        { id: 'neon', name: 'Cyber Neon', price: 100, theme: 'neon' }
+    ];
+
+    // --- AUDIO SYNTHESIZER (Web Audio API) ---
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+        if (audioCtx.state === 'suspended') { audioCtx.resume(); }
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === 'click') {
+            osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+        } else if (type === 'win') {
+            osc.frequency.setValueAtTime(523.25, audioCtx.currentTime);
+            osc.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.1);
+            osc.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.4);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+        } else if (type === 'draw') {
+            osc.frequency.setValueAtTime(300, audioCtx.currentTime);
+            osc.frequency.linearRampToValueAtTime(150, audioCtx.currentTime + 0.3);
+            gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+        }
+    }
+
+    // --- AUTH ---
+    function switchAuthTab(tab) {
+        document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function handleAuth() {
+        const user = document.getElementById('auth-user').value.trim();
+        if(!user) {
+            alert('Vui lòng nhập tên tài khoản!');
+            return;
+        }
+        currentUser.username = user;
+        document.getElementById('display-username').textContent = user;
+        updateDashboardUI();
+        switchScreen('screen-dash');
+    }
+
+    function updateDashboardUI() {
+        document.getElementById('display-streak').textContent = currentUser.streak;
+        document.getElementById('display-wins').textContent = currentUser.wins;
+        document.getElementById('display-tokens').textContent = currentUser.tokens;
+        document.getElementById('shop-tokens').textContent = currentUser.tokens;
+    }
+
+    function switchScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    // --- MODALS & MENUS ---
+    function openModeModal(type) {
+        document.getElementById('modal-mode').style.display = 'flex';
+        if(type === 'ai') {
+            document.getElementById('modal-mode-title').textContent = 'Chọn Cấp Độ Máy';
+            document.getElementById('modal-mode-desc').textContent = 'Thử thách trí tuệ nhân tạo cờ caro';
+            document.getElementById('ai-levels-container').style.display = 'block';
+            document.getElementById('online-rooms-container').style.display = 'none';
+        } else {
+            document.getElementById('modal-mode-title').textContent = 'Đấu Trực Tuyến (Socket Room)';
+            document.getElementById('modal-mode-desc').textContent = 'Kết nối ngang hàng với người chơi khác';
+            document.getElementById('ai-levels-container').style.display = 'none';
+            document.getElementById('online-rooms-container').style.display = 'block';
+        }
+    }
+
+    function closeModals() {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+    }
+
+    function returnToDashboard() {
+        if(practiceInterval) clearInterval(practiceInterval);
+        closeModals();
+        updateDashboardUI();
+        switchScreen('screen-dash');
+    }
+
+    // --- GAME ENGINE ---
+    function initBoard() {
+        board = Array(boardSize).fill(null).map(() => Array(boardSize).fill(''));
+        const boardEl = document.getElementById('caro-board');
+        boardEl.innerHTML = '';
+        for(let r=0; r<boardSize; r++) {
+            for(let c=0; c<boardSize; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+                cell.addEventListener('click', () => handleCellClick(r, c));
+                boardEl.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(r, c) {
+        if(!gameActive || board[r][c] !== '') return;
+        if(gameMode === 'online' && !isMyTurnOnline) return;
+
+        makeMove(r, c, currentPlayer);
+
+        if(checkWin(r, c, currentPlayer)) {
+            endGame(currentPlayer);
+            return;
+        }
+        if(checkDraw()) {
+            endGame('draw');
+            return;
+        }
+
+        // Switch turn
+        if(gameMode === 'ai') {
+            currentPlayer = 'O';
+            updateTurnIndicator();
+            setTimeout(aiMakeMove, 400);
+        } else if(gameMode === 'online') {
+            isMyTurnOnline = false;
+            document.getElementById('match-status-text').textContent = 'Đợi đối thủ...';
+            // Simulate socket response back & forth
+            setTimeout(simulateOnlineOpponentMove, 1500);
+        } else {
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            updateTurnIndicator();
+        }
+    }
+
+    function makeMove(r, c, player) {
+        board[r][c] = player;
+        playSound('click');
+        const cells = document.getElementById('caro-board').children;
+        const index = r * boardSize + c;
+        cells[index].textContent = player;
+        cells[index].classList.add(player.toLowerCase());
+    }
+
+    function updateTurnIndicator() {
+        const p1Badge = document.getElementById('p1-badge');
+        const p2Badge = document.getElementById('p2-badge');
+        if(currentPlayer === 'X') {
+            p1Badge.classList.add('active');
+            p2Badge.classList.remove('active');
+        } else {
+            p2Badge.classList.add('active');
+            p1Badge.classList.remove('active');
+        }
+    }
+
+    // --- AI MODES ---
+    function startAIMatch(level) {
+        aiDifficulty = level;
+        gameMode = 'ai';
+        closeModals();
+        currentPlayer = 'X';
+        gameActive = true;
+        document.getElementById('p1-name').textContent = currentUser.username;
+        document.getElementById('p2-name').textContent = `AI (${level.toUpperCase()})`;
+        document.getElementById('match-status-text').textContent = 'Trận Đấu AI';
+        initBoard();
+        updateTurnIndicator();
+        switchScreen('screen-game');
+    }
+
+    function aiMakeMove() {
+        if(!gameActive) return;
+        let move = null;
+
+        if(aiDifficulty === 'easy') {
+            move = getRandomMove();
+        } else if(aiDifficulty === 'medium') {
+            move = getSmartMove(0.6); // 60% smart
+        } else {
+            move = getSmartMove(0.95); // 95% smart
+        }
+
+        if(move) {
+            makeMove(move.r, move.c, 'O');
+            if(checkWin(move.r, move.c, 'O')) {
+                endGame('O');
+                return;
+            }
+            if(checkDraw()) {
+                endGame('draw');
+                return;
+            }
+            currentPlayer = 'X';
+            updateTurnIndicator();
+        }
+    }
+
+    function getRandomMove() {
+        let emptyCells = [];
+        for(let r=0; r<boardSize; r++) {
+            for(let c=0; c<boardSize; c++) {
+                if(board[r][c] === '') emptyCells.push({r, c});
+            }
+        }
+        if(emptyCells.length === 0) return null;
+        return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    }
+
+    function getSmartMove(intelligence) {
+        if(Math.random() > intelligence) return getRandomMove();
+        
+        // Check winning or blocking opportunities
+        for(let r=0; r<boardSize; r++) {
+            for(let c=0; c<boardSize; c++) {
+                if(board[r][c] === '') {
+                    // Test if AI can win
+                    board[r][c] = 'O';
+                    if(checkWin(r, c, 'O')) { board[r][c] = ''; return {r, c}; }
+                    board[r][c] = '';
+
+                    // Test if player can win, block it
+                    board[r][c] = 'X';
+                    if(checkWin(r, c, 'X')) { board[r][c] = ''; return {r, c}; }
+                    board[r][c] = '';
+                }
+            }
+        }
+        // Fallback to nearby or random
+        return getRandomMove();
+    }
+
+    // --- PRACTICE MODE (AI vs AI) ---
+    function startPracticeMode() {
+        closeModals();
+        gameMode = 'practice';
+        currentPlayer = 'X';
+        gameActive = true;
+        document.getElementById('p1-name').textContent = 'AI Số 1 (X)';
+        document.getElementById('p2-name').textContent = 'AI Số 2 (O)';
+        document.getElementById('match-status-text').textContent = 'Chế Độ Luyện Tập (AI vs AI)';
+        initBoard();
+        updateTurnIndicator();
+        switchScreen('screen-game');
+
+        practiceInterval = setInterval(() => {
+            if(!gameActive) return;
+            let move = getRandomMove();
+            if(move) {
+                makeMove(move.r, move.c, currentPlayer);
+                if(checkWin(move.r, move.c, currentPlayer)) {
+                    endGame(currentPlayer);
+                    clearInterval(practiceInterval);
+                    return;
+                }
+                if(checkDraw()) {
+                    endGame('draw');
+                    clearInterval(practiceInterval);
+                    return;
+                }
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateTurnIndicator();
+            }
+        }, 300);
+    }
+
+    // --- ONLINE SOCKET ROOM SIMULATION ---
+    function createOnlineRoom() {
+        closeModals();
+        onlineRoomId = 'ROOM' + Math.floor(1000 + Math.random() * 9000);
+        document.getElementById('created-room-code').textContent = onlineRoomId;
+        document.getElementById('modal-room-created').style.display = 'flex';
+    }
+
+    function copyRoomCode() {
+        navigator.clipboard.writeText(onlineRoomId);
+        alert('Đã sao chép mã phòng: ' + onlineRoomId);
+    }
+
+    function startCreatedOnlineGame() {
+        closeModals();
+        gameMode = 'online';
+        currentPlayer = 'X';
+        isMyTurnOnline = true;
+        gameActive = true;
+        document.getElementById('p1-name').textContent = currentUser.username;
+        document.getElementById('p2-name').textContent = 'Đối Thủ (Online)';
+        document.getElementById('match-status-text').textContent = 'Đến lượt bạn';
+        initBoard();
+        updateTurnIndicator();
+        switchScreen('screen-game');
+    }
+
+    function joinOnlineRoom() {
+        const code = document.getElementById('input-room-id').value.trim();
+        if(!code) {
+            alert('Vui lòng nhập ID phòng!');
+            return;
+        }
+        closeModals();
+        gameMode = 'online';
+        onlineRoomId = code;
+        currentPlayer = 'X';
+        isMyTurnOnline = true;
+        gameActive = true;
+        document.getElementById('p1-name').textContent = currentUser.username;
+        document.getElementById('p2-name').textContent = 'Chủ Phòng (Online)';
+        document.getElementById('match-status-text').textContent = 'Kết nối Socket thành công!';
+        initBoard();
+        updateTurnIndicator();
+        switchScreen('screen-game');
+    }
+
+    function simulateOnlineOpponentMove() {
+        if(!gameActive || gameMode !== 'online') return;
+        let move = getRandomMove();
+        if(move) {
+            makeMove(move.r, move.c, 'O');
+            if(checkWin(move.r, move.c, 'O')) {
+                endGame('O');
+                return;
+            }
+            if(checkDraw()) {
+                endGame('draw');
+                return;
+            }
+            isMyTurnOnline = true;
+            document.getElementById('match-status-text').textContent = 'Đến lượt bạn';
+        }
+    }
+
+    // --- WIN CONDITION CHECKER (5 in a row) ---
+    function checkWin(r, c, player) {
+        const directions = [
+            {dr: 0, dc: 1},  // Horizontal
+            {dr: 1, dc: 0},  // Vertical
+            {dr: 1, dc: 1},  // Diagonal \
+            {dr: 1, dc: -1}  // Diagonal /
+        ];
+
+        for(let d of directions) {
+            let count = 1;
+            let winningCells = [{r, c}];
+
+            // Check forward
+            let step = 1;
+            while(true) {
+                let nr = r + d.dr * step;
+                let nc = c + d.dc * step;
+                if(nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize && board[nr][nc] === player) {
+                    count++;
+                    winningCells.push({r: nr, c: nc});
+                    step++;
+                } else {
+                    break;
+                }
+            }
+
+            // Check backward
+            step = 1;
+            while(true) {
+                let nr = r - d.dr * step;
+                let nc = c - d.dc * step;
+                if(nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize && board[nr][nc] === player) {
+                    count++;
+                    winningCells.push({r: nr, c: nc});
+                    step++;
+                } else {
+                    break;
+                }
+            }
+
+            if(count >= 5) {
+                highlightWinningCells(winningCells);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function highlightWinningCells(cells) {
+        const cellElements = document.getElementById('caro-board').children;
+        cells.forEach(cell => {
+            let idx = cell.r * boardSize + cell.c;
+            cellElements[idx].classList.add('winning');
+        });
+    }
+
+    function checkDraw() {
+        for(let r=0; r<boardSize; r++) {
+            for(let c=0; c<boardSize; c++) {
+                if(board[r][c] === '') return false;
+            }
+        }
+        return true;
+    }
+
+    function endGame(winner) {
+        gameActive = false;
+        if(practiceInterval) clearInterval(practiceInterval);
+
+        const titleEl = document.getElementById('gameover-title');
+        const descEl = document.getElementById('gameover-desc');
+
+        if(winner === 'draw') {
+            playSound('draw');
+            titleEl.textContent = 'TRẬN ĐẤU HÒA!';
+            descEl.textContent = 'Bảng đấu đã kín ô nhưng không bên nào phá vỡ được phòng tuyến.';
+        } else if(winner === 'X' || (gameMode === 'online' && winner === 'X')) {
+            playSound('win');
+            titleEl.textContent = 'CHIẾN THẮNG VẺ VANG!';
+            currentUser.wins += 1;
+            currentUser.tokens += 20;
+            descEl.textContent = 'Bạn đã đạt 5 ô liên tiếp! Nhận ngay +20 Token phần thưởng.';
+        } else {
+            playSound('draw');
+            titleEl.textContent = 'THẤT BẠI!';
+            descEl.textContent = 'Đối thủ đã nhanh chân hơn trong ván đấu này.';
+        }
+
+        document.getElementById('modal-gameover').style.display = 'flex';
+    }
+
+    function resetGame() {
+        if(practiceInterval) clearInterval(practiceInterval);
+        if(gameMode === 'ai') startAIMatch(aiDifficulty);
+        else if(gameMode === 'practice') startPracticeMode();
+        else startCreatedOnlineGame();
+    }
+
+    // --- SHOP & THEMES ---
+    function openShopScreen() {
+        renderShop();
+        switchScreen('screen-shop');
+    }
+
+    function renderShop() {
+        const listEl = document.getElementById('skin-shop-list');
+        listEl.innerHTML = '';
+        skins.forEach(skin => {
+            const isUnlocked = currentUser.unlockedSkins.includes(skin.id);
+            const isSelected = currentUser.activeSkin === skin.id;
+
+            const card = document.createElement('div');
+            card.className = `skin-card ${isSelected ? 'selected' : ''}`;
+            card.innerHTML = `
+                <h4>${skin.name}</h4>
+                <p>${skin.price === 0 ? 'Miễn phí' : skin.price + ' Tokens'}</p>
+                <button class="btn ${isSelected ? 'btn-secondary' : ''}" style="padding: 8px; font-size: 12px; margin: 0;" onclick="handleSkinAction('${skin.id}')">
+                    ${isSelected ? 'Đang Dùng' : (isUnlocked ? 'Chọn Dùng' : 'Mở Khóa')}
+                </button>
+            `;
+            listEl.appendChild(card);
+        });
+    }
+
+    function handleSkinAction(skinId) {
+        const skin = skins.find(s => s.id === skinId);
+        if(currentUser.unlockedSkins.includes(skinId)) {
+            currentUser.activeSkin = skinId;
+            document.body.setAttribute('data-theme', skin.theme);
+            renderShop();
+        } else {
+            if(currentUser.tokens >= skin.price) {
+                currentUser.tokens -= skin.price;
+                currentUser.unlockedSkins.push(skinId);
+                currentUser.activeSkin = skinId;
+                document.body.setAttribute('data-theme', skin.theme);
+                updateDashboardUI();
+                renderShop();
+            } else {
+                alert('Bạn không đủ Token để mở khóa giao diện này!');
+            }
+        }
+    }
+</script>
+</body>
+</html>
